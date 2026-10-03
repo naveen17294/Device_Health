@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.devicehealth.assistant.data.AppInfo
 import com.devicehealth.assistant.data.AppStatsRepository
+import com.devicehealth.assistant.data.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.withContext
 
 class AppAnalysisViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppStatsRepository(application)
+    private val settingsRepository = UserSettingsRepository(application)
     
     private val _uiState = MutableStateFlow<AppAnalysisUiState>(AppAnalysisUiState.Loading)
     val uiState: StateFlow<AppAnalysisUiState> = _uiState.asStateFlow()
@@ -31,8 +33,10 @@ class AppAnalysisViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.value = AppAnalysisUiState.Loading
         viewModelScope.launch {
             try {
-                val stats = withContext(Dispatchers.IO) { repository.getAppStats() }
-                _uiState.value = AppAnalysisUiState.Success(stats)
+                settingsRepository.largeAppThresholdFlow.collect { threshold ->
+                    val stats = withContext(Dispatchers.IO) { repository.getAppStats() }
+                    _uiState.value = AppAnalysisUiState.Success(stats, threshold)
+                }
             } catch (e: Exception) {
                 _uiState.value = AppAnalysisUiState.Error(e)
             }
@@ -44,5 +48,5 @@ sealed interface AppAnalysisUiState {
     object Loading : AppAnalysisUiState
     object NeedsPermission : AppAnalysisUiState
     data class Error(val throwable: Throwable) : AppAnalysisUiState
-    data class Success(val apps: List<AppInfo>) : AppAnalysisUiState
+    data class Success(val apps: List<AppInfo>, val largeAppThresholdBytes: Long) : AppAnalysisUiState
 }

@@ -13,9 +13,11 @@
 - Scaffolded the base Android app (`com.devicehealth.assistant`).
 - Implemented **Phase 1: Core Dashboard** (RAM, Storage, Uptime).
 - Implemented **Phase 2: App Analysis** (Usage Access onboarding, App sizes, Recommendations).
+- Added DataStore preferences for configurable app thresholds and storage warning percentages.
+- Implemented **Phase 3: Lag Tracking** (Room DB, Quick Settings Tile, Manual log history screen).
 
 ## Next Steps
-- Implement Phase 3: Lag tracking (Manual lag-report button, Quick Settings tile, Room event history).
+- Implement Phase 4: Recommendations (Deterministic rule engine for device optimization).
 
 ## Key Constraints
 - Keep all diagnostic data on-device by default (offline MVP).

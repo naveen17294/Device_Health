@@ -66,9 +66,10 @@ fun AppAnalysisScreen(
             }
             is AppAnalysisUiState.Success -> {
                 val apps = (state as AppAnalysisUiState.Success).apps
+                val threshold = (state as AppAnalysisUiState.Success).largeAppThresholdBytes
                 LazyColumn {
                     items(apps) { app ->
-                        AppItemCard(app)
+                        AppItemCard(app, threshold)
                     }
                 }
             }
@@ -77,7 +78,7 @@ fun AppAnalysisScreen(
 }
 
 @Composable
-fun AppItemCard(app: AppInfo) {
+fun AppItemCard(app: AppInfo, largeAppThresholdBytes: Long) {
     val context = LocalContext.current
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -90,7 +91,7 @@ fun AppItemCard(app: AppInfo) {
             Spacer(modifier = Modifier.height(8.dp))
             
             // Large app warning
-            if (app.totalBytes > 500L * 1024 * 1024) { // 500 MB
+            if (app.totalBytes > largeAppThresholdBytes) {
                 Text("⚠️ Very Large App - Review cache/downloads", color = MaterialTheme.colorScheme.error)
             }
 

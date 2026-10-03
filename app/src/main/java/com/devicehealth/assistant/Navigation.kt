@@ -28,6 +28,12 @@ fun MainNavigation() {
               modifier = Modifier.safeDrawingPadding()
           )
         }
+        entry<LagHistory> {
+          com.devicehealth.assistant.ui.history.LagHistoryScreen(
+              onBack = { backStack.removeLastOrNull() },
+              modifier = Modifier.safeDrawingPadding()
+          )
+        }
       },
   )
 }

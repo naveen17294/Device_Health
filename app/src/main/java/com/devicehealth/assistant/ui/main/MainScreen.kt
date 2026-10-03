@@ -31,6 +31,7 @@ fun MainScreen(
     is DeviceHealthUiState.Success -> {
       DashboardContent(
           data = (state as DeviceHealthUiState.Success).data,
+          warningPercent = (state as DeviceHealthUiState.Success).warningPercent,
           onRefresh = { viewModel.refreshData() },
           onItemClick = onItemClick,
           modifier = modifier
@@ -45,6 +46,7 @@ fun MainScreen(
 @Composable
 internal fun DashboardContent(
     data: DeviceHealthState, 
+    warningPercent: Int,
     onRefresh: () -> Unit,
     onItemClick: (NavKey) -> Unit,
     modifier: Modifier = Modifier
@@ -68,12 +70,13 @@ internal fun DashboardContent(
       Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
           Column(modifier = Modifier.padding(16.dp)) {
               val storageUsed = data.storageTotalBytes - data.storageAvailableBytes
-              val storagePercent = (storageUsed.toDouble() / data.storageTotalBytes * 100).toInt()
+              val storagePercentUsed = (storageUsed.toDouble() / data.storageTotalBytes * 100).toInt()
+              val freePercent = 100 - storagePercentUsed
               Text("Storage", style = MaterialTheme.typography.titleMedium)
               Text("Used: ${formatBytes(storageUsed)} / ${formatBytes(data.storageTotalBytes)}")
-              Text("Free space: ${100 - storagePercent}%")
-              if (100 - storagePercent < 15) {
-                  Text("⚠️ Storage is critically low", color = MaterialTheme.colorScheme.error)
+              Text("Free space: ${freePercent}%")
+              if (freePercent < warningPercent) {
+                  Text("⚠️ Storage is critically low (< $warningPercent%)", color = MaterialTheme.colorScheme.error)
               }
           }
       }
@@ -88,8 +91,13 @@ internal fun DashboardContent(
 
       Spacer(modifier = Modifier.weight(1f))
 
-      Button(onClick = { onItemClick(AppAnalysis) }, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-          Text("App Analysis")
+      Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          Button(onClick = { onItemClick(AppAnalysis) }, modifier = Modifier.weight(1f)) {
+              Text("App Analysis")
+          }
+          Button(onClick = { onItemClick(com.devicehealth.assistant.LagHistory) }, modifier = Modifier.weight(1f)) {
+              Text("Lag History")
+          }
       }
 
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
