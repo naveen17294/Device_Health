@@ -218,7 +218,7 @@ Proceed with these sensible defaults:
 
 - Kotlin
 - Jetpack Compose
-- Minimum SDK: Android 10, API 29
+- Minimum SDK: Android 14, API 34
 - Target/compile SDK: latest stable SDK installed in Android Studio
 - Offline-first and no backend
 - Personal APK/sideload distribution initially

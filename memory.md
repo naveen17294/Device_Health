@@ -14,7 +14,7 @@
 
 ## Next Steps
 - Confirm requirements with user.
-- Setup Android project structure (Kotlin, Compose, Min SDK 29).
+- Setup Android project structure (Kotlin, Compose, Min SDK 34).
 - Implement Phase 1: Core Dashboard.
 
 ## Key Constraints
