@@ -64,8 +64,8 @@ fun LagEventCard(event: LagEvent) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(dateString, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Available RAM: \ MB", style = MaterialTheme.typography.bodyMedium)
-            Text("Uptime: \ hours", style = MaterialTheme.typography.bodyMedium)
+            Text("Available RAM: ${freeRamMb} MB", style = MaterialTheme.typography.bodyMedium)
+            Text("Uptime: ${uptimeHours} hours", style = MaterialTheme.typography.bodyMedium)
             if (event.ramLowMemory) {
                 Text("?? Low Memory condition active", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }

@@ -9,7 +9,7 @@ import org.junit.Test
 class RecommendationEngineTest {
     
     @Test
-    fun evaluate returns low storage warning when below threshold() {
+    fun evaluate_returns_low_storage_warning_when_below_threshold() {
         val engine = RecommendationEngine()
         val healthState = DeviceHealthState(
             ramTotalBytes = 1000,
@@ -27,7 +27,7 @@ class RecommendationEngineTest {
     }
 
     @Test
-    fun evaluate returns large apps info when apps exceed threshold() {
+    fun evaluate_returns_large_apps_info_when_apps_exceed_threshold() {
         val engine = RecommendationEngine()
         val healthState = DeviceHealthState(1000, 500, false, 100, 50, 0)
         
