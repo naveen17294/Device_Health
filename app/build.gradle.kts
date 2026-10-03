@@ -90,4 +90,7 @@ dependencies {
 
   // DataStore
   implementation(libs.androidx.datastore.preferences)
+
+  // JankStats
+  implementation(libs.androidx.metrics.performance)
 }
