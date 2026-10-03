@@ -3,11 +3,26 @@ package com.devicehealth.assistant.ui.main
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,7 +39,7 @@ fun MainScreen(
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   when (state) {
     DeviceHealthUiState.Loading -> {
-      Box(modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+      Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
       }
     }
@@ -38,7 +53,9 @@ fun MainScreen(
       )
     }
     is DeviceHealthUiState.Error -> {
-      Text("Error loading data: ${(state as DeviceHealthUiState.Error).throwable.message}")
+      Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          Text("Error loading data", color = MaterialTheme.colorScheme.error)
+      }
     }
   }
 }
@@ -52,76 +69,182 @@ internal fun DashboardContent(
     modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
-  Column(modifier = modifier.padding(16.dp).fillMaxSize()) {
-      Text(text = "Device Health", style = MaterialTheme.typography.headlineMedium)
-      Spacer(modifier = Modifier.height(16.dp))
+  val scrollState = rememberScrollState()
 
-      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-          Column(modifier = Modifier.padding(16.dp)) {
-              val ramUsed = data.ramTotalBytes - data.ramAvailableBytes
-              Text("RAM", style = MaterialTheme.typography.titleMedium)
-              Text("Used: ${formatBytes(ramUsed)} / ${formatBytes(data.ramTotalBytes)}")
-              if (data.ramLowMemory) {
-                  Text("⚠️ Android reports memory pressure", color = MaterialTheme.colorScheme.error)
+  Column(
+      modifier = modifier
+          .fillMaxSize()
+          .verticalScroll(scrollState)
+          .padding(24.dp),
+      verticalArrangement = Arrangement.spacedBy(16.dp)
+  ) {
+      Text(
+          text = "Device Health", 
+          style = MaterialTheme.typography.headlineLarge,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.padding(bottom = 8.dp)
+      )
+
+      val ramUsed = data.ramTotalBytes - data.ramAvailableBytes
+      val ramPercent = if (data.ramTotalBytes > 0) ramUsed.toFloat() / data.ramTotalBytes.toFloat() else 0f
+      
+      MetricCard(
+          title = "Memory (RAM)",
+          icon = Icons.Rounded.Memory,
+          usedStr = formatBytes(ramUsed),
+          totalStr = formatBytes(data.ramTotalBytes),
+          progress = ramPercent,
+          isWarning = data.ramLowMemory,
+          warningText = "Android reports memory pressure"
+      )
+
+      val storageUsed = data.storageTotalBytes - data.storageAvailableBytes
+      val storagePercent = if (data.storageTotalBytes > 0) storageUsed.toFloat() / data.storageTotalBytes.toFloat() else 0f
+      val freePercent = ((1f - storagePercent) * 100).toInt()
+      
+      MetricCard(
+          title = "Internal Storage",
+          icon = Icons.Rounded.Storage,
+          usedStr = formatBytes(storageUsed),
+          totalStr = formatBytes(data.storageTotalBytes),
+          progress = storagePercent,
+          isWarning = freePercent < warningPercent,
+          warningText = "Storage is critically low (< $warningPercent%)"
+      )
+
+      ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+          Row(
+              modifier = Modifier.padding(16.dp),
+              verticalAlignment = Alignment.CenterVertically
+          ) {
+              Icon(Icons.Rounded.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(32.dp))
+              Spacer(modifier = Modifier.width(16.dp))
+              Column {
+                  val uptimeHours = data.uptimeMillis / (1000 * 60 * 60)
+                  Text("Device Uptime", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                  Text("$uptimeHours hours", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
           }
       }
 
-      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-          Column(modifier = Modifier.padding(16.dp)) {
-              val storageUsed = data.storageTotalBytes - data.storageAvailableBytes
-              val storagePercentUsed = (storageUsed.toDouble() / data.storageTotalBytes * 100).toInt()
-              val freePercent = 100 - storagePercentUsed
-              Text("Storage", style = MaterialTheme.typography.titleMedium)
-              Text("Used: ${formatBytes(storageUsed)} / ${formatBytes(data.storageTotalBytes)}")
-              Text("Free space: ${freePercent}%")
-              if (freePercent < warningPercent) {
-                  Text("⚠️ Storage is critically low (< $warningPercent%)", color = MaterialTheme.colorScheme.error)
-              }
-          }
-      }
+      Spacer(modifier = Modifier.height(8.dp))
+      Text("Tools & Analysis", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-          Column(modifier = Modifier.padding(16.dp)) {
-              val uptimeHours = data.uptimeMillis / (1000 * 60 * 60)
-              Text("Device Uptime", style = MaterialTheme.typography.titleMedium)
-              Text("$uptimeHours hours")
-          }
-      }
-
-      Spacer(modifier = Modifier.weight(1f))
-
-      Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Button(onClick = { onItemClick(AppAnalysis) }, modifier = Modifier.weight(1f)) {
-              Text("App Analysis")
-          }
-          Button(onClick = { onItemClick(com.devicehealth.assistant.LagHistory) }, modifier = Modifier.weight(1f)) {
-              Text("Lag History")
-          }
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          ActionCard(
+              title = "App Analysis",
+              icon = Icons.Rounded.Apps,
+              modifier = Modifier.weight(1f),
+              onClick = { onItemClick(AppAnalysis) }
+          )
+          ActionCard(
+              title = "Lag History",
+              icon = Icons.Rounded.History,
+              modifier = Modifier.weight(1f),
+              onClick = { onItemClick(com.devicehealth.assistant.LagHistory) }
+          )
       }
 
       Button(
           onClick = { onItemClick(com.devicehealth.assistant.Recommendations) }, 
-          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+          modifier = Modifier.fillMaxWidth().height(56.dp),
+          shape = MaterialTheme.shapes.large
       ) {
-          Text("View Recommendations")
+          Icon(Icons.Rounded.Lightbulb, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Smart Recommendations", style = MaterialTheme.typography.titleMedium)
       }
 
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-          Button(onClick = onRefresh, modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          OutlinedButton(
+              onClick = onRefresh, 
+              modifier = Modifier.weight(1f).height(50.dp)
+          ) {
+              Icon(Icons.Rounded.Refresh, contentDescription = null)
+              Spacer(modifier = Modifier.width(8.dp))
               Text("Refresh")
           }
-          FilledTonalButton(onClick = {
-              try {
-                  context.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
-              } catch (e: Exception) {
-                  context.startActivity(Intent(Settings.ACTION_SETTINGS))
-              }
-          }, modifier = Modifier.weight(1f).padding(start = 8.dp)) {
-              Text("Storage Settings")
+          FilledTonalButton(
+              onClick = {
+                  try {
+                      context.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
+                  } catch (e: Exception) {
+                      context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                  }
+              }, 
+              modifier = Modifier.weight(1f).height(50.dp)
+          ) {
+              Icon(Icons.Rounded.Settings, contentDescription = null)
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Settings")
           }
       }
   }
+}
+
+@Composable
+fun ActionCard(title: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(100.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        }
+    }
+}
+
+@Composable
+fun MetricCard(
+    title: String,
+    icon: ImageVector,
+    usedStr: String,
+    totalStr: String,
+    progress: Float,
+    isWarning: Boolean,
+    warningText: String
+) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val progressColor = if (isWarning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+                color = progressColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(usedStr, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(totalStr, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            if (isWarning) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(warningText, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
 }
 
 private fun formatBytes(bytes: Long): String {
