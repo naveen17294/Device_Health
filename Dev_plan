@@ -1,0 +1,230 @@
+Build it as a **native Android application using Kotlin and Jetpack Compose**. Although you already know Java, Kotlin is the best fit because modern Android libraries, Compose, coroutines, and official architecture guidance are Kotlin-first; your Java knowledge will make Kotlin straightforward to learn. [developer.android](https://developer.android.com/topic/architecture/recommendations)
+
+## Recommended stack
+
+| Area | Technology | Why |
+|---|---|---|
+| Language | **Kotlin** | Java-compatible, concise, null-safe, preferred for modern Android |
+| UI | **Jetpack Compose + Material 3** | Modern declarative UI; officially recommended for new Android apps  [developer.android](https://developer.android.com/topic/architecture/recommendations) |
+| Architecture | **MVVM + Repository + Unidirectional Data Flow** | Maintainable, testable, and avoids mixing Android APIs with UI code  [developer.android](https://developer.android.com/topic/architecture/recommendations) |
+| UI state | `ViewModel` + `StateFlow` | Lifecycle-safe reactive screen state |
+| Local database | **Room** | Stores lag reports, diagnostic snapshots and recommendation history |
+| Preferences | **DataStore** | Warning threshold, onboarding state, permissions and user settings |
+| Dependency injection | **Hilt** | Clean dependency management without manual singleton handling |
+| Background work | **WorkManager** | Optional periodic health snapshot; not continuous RAM monitoring |
+| Navigation | Navigation Compose | Dashboard, Apps, Lag History, Recommendations and Settings |
+| Testing | JUnit, MockK, Compose UI tests | Unit and UI testing |
+| Performance | JankStats + Macrobenchmark | Measures jank inside this application and prevents the assistant itself becoming slow  [developer.android](https://developer.android.com/topic/performance/jankstats) |
+| Build | Gradle Kotlin DSL + Version Catalog | Centralized and maintainable dependency versions |
+
+**Do not use Python, React Native or Flutter for the core app.** This project depends heavily on Android framework APIs and system Settings intents, so native Android gives the simplest, smallest and most reliable implementation.
+
+## App architecture
+
+```text
+UI / Compose screens
+        ↓ events
+ViewModels + immutable UiState
+        ↓
+Use cases
+        ↓
+Repositories
+        ↓
+Android APIs + Room + DataStore
+```
+
+Suggested package structure:
+
+```text
+com.devicehealth.assistant
+├── app
+├── core
+│   ├── common
+│   ├── designsystem
+│   ├── permissions
+│   └── util
+├── data
+│   ├── local
+│   ├── repository
+│   └── source
+├── domain
+│   ├── model
+│   └── usecase
+├── feature
+│   ├── dashboard
+│   ├── apps
+│   ├── lag
+│   ├── recommendations
+│   └── settings
+└── worker
+```
+
+A single Android application module is enough initially. Do not start with multiple Gradle modules—the feature-based package structure provides sufficient separation for an MVP.
+
+## Feature implementation
+
+| Feature | Android implementation | Feasibility |
+|---|---|---|
+| Available RAM | `ActivityManager.getMemoryInfo()` | Fully supported |
+| Low-memory status | `MemoryInfo.lowMemory` and `threshold` | Fully supported |
+| Remaining storage | `StatFs(Environment.getDataDirectory())` | Fully supported |
+| Storage warning | Calculate free percentage and compare with configurable 15% threshold | Fully supported |
+| Installed app list | `PackageManager` | Restricted on Android 11+ |
+| Per-app storage size | `StorageStatsManager.queryStatsForPackage()` | Requires Usage Access |
+| Open storage settings | `Settings.ACTION_INTERNAL_STORAGE_SETTINGS` | Supported, with fallback |
+| Open app settings | `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` | Supported |
+| Device uptime | `SystemClock.elapsedRealtime()` | Fully supported |
+| Manual lag reports | Timestamp plus RAM/storage/uptime snapshot in Room | Fully supported |
+| Detect this app’s jank | AndroidX `JankStats` | Fully supported |
+| Detect phone-wide lag | Not reliably available to a normal application | Limited |
+| Cleanup recommendations | Local rule engine | Fully supported |
+
+`SystemClock.elapsedRealtime()` measures time since boot and includes deep sleep, making it appropriate for displaying device uptime. Android exposes dedicated intents for internal-storage and per-application settings screens. [developer.android](https://developer.android.com/reference/android/os/SystemClock)
+
+## Important limitation
+
+The application **cannot automatically detect every freeze occurring in other apps**. `JankStats` measures frames belonging to this application’s own window, while `ApplicationExitInfo` primarily provides process-exit details such as ANR or low-memory termination. [developer.android](https://developer.android.com/topic/performance/jankstats)
+
+Use this practical design instead:
+
+- Add a prominent **“Phone lagged now”** button.
+- Add a **Quick Settings tile** so the event can be recorded without opening the complete app.
+- When tapped, record the timestamp, available RAM, `lowMemory`, free storage and uptime.
+- Let the user select the app they were using.
+- Correlate repeated reports with low storage, long uptime or a particular application.
+- Use JankStats separately to ensure your assistant’s own screens remain smooth.
+
+This produces useful diagnostic history without using intrusive accessibility services or pretending to have system-level access.
+
+## Large-app detection
+
+Use:
+
+```text
+PackageManager
+    → visible installed packages
+StorageStatsManager
+    → appBytes + dataBytes + cacheBytes
+    → sort descending
+```
+
+Reading storage statistics for other applications requires `PACKAGE_USAGE_STATS`. Declaring it is not sufficient—the user must manually grant **Usage Access** through Android Settings. [developer.android](https://developer.android.com/reference/kotlin/android/app/usage/UsageStatsManager)
+
+Android 11+ also filters the installed-app list. Seeing every installed app may require `QUERY_ALL_PACKAGES`, which Google Play treats as sensitive and approves only when broad package visibility is genuinely central to the application. Therefore: [support.google](https://support.google.com/googleplay/android-developer/answer/10158779?hl=en)
+
+- **Personal/sideloaded version:** Use `QUERY_ALL_PACKAGES` with clear disclosure.
+- **Play Store version:** Make device/app storage management the documented core purpose and prepare for permission review.
+- Never upload or sell the installed-app inventory.
+- Keep all diagnostic data on-device by default.
+
+## Recommendation engine
+
+Start with deterministic rules instead of AI:
+
+```text
+IF freeStoragePercent < 15
+    → "Storage is critically low. Remove downloads or large unused apps."
+
+IF lowMemory == true
+    → "Android currently reports memory pressure."
+
+IF uptimeDays >= 7 AND lagReportsLast24Hours >= 3
+    → "Restarting may clear a temporary system or app issue."
+
+IF appTotalBytes >= userConfiguredLargeAppThreshold
+    → "Review this app's downloads, cache and offline content."
+
+IF sameAppReportedInLagEvents >= 3
+    → "This app is repeatedly associated with lag. Update, clear cache or reinstall it."
+```
+
+Keep thresholds configurable. Label recommendations as observations rather than claiming that a particular app definitively caused the lag.
+
+## Permissions
+
+Initial manifest requirements will likely include:
+
+```xml
+<uses-permission
+    android:name="android.permission.PACKAGE_USAGE_STATS"
+    tools:ignore="ProtectedPermissions" />
+
+<!-- Include only for a justified device-management build -->
+<uses-permission
+    android:name="android.permission.QUERY_ALL_PACKAGES"
+    tools:ignore="QueryAllPackagesPermission" />
+```
+
+Avoid these:
+
+- Accessibility Service
+- Device Administrator
+- `MANAGE_EXTERNAL_STORAGE`
+- Overlay permission
+- Exact alarms
+- Continuous foreground service
+- Internet permission for the offline MVP
+
+Fewer permissions improve privacy, battery usage and Play Store acceptance.
+
+## Suggested MVP
+
+### Phase 1: Core dashboard
+
+- RAM used, available and total
+- Android `lowMemory` status
+- Storage used, free and percentage
+- 15% warning
+- Device uptime
+- Refresh button
+- Open Storage Settings button
+
+### Phase 2: App analysis
+
+- Usage Access onboarding
+- Installed user-app list
+- App, data and cache sizes
+- Sort by total size
+- Open App Details
+- Recommendation badges
+
+### Phase 3: Lag tracking
+
+- Manual lag-report button
+- Quick Settings tile
+- Room event history
+- Automatic device snapshot
+- Optional app association
+- Daily and weekly event counts
+
+### Phase 4: Recommendations
+
+- Local rule engine
+- Severity levels: Info, Warning and Critical
+- Dismissed/completed recommendation tracking
+- “Why am I seeing this?” explanation
+
+### Phase 5: Quality
+
+- Unit tests for calculations and rules
+- Compose UI tests
+- Macrobenchmark for startup and scrolling
+- Battery and memory profiling
+- Release APK signing
+
+## Development defaults
+
+Proceed with these sensible defaults:
+
+- Kotlin
+- Jetpack Compose
+- Minimum SDK: Android 10, API 29
+- Target/compile SDK: latest stable SDK installed in Android Studio
+- Offline-first and no backend
+- Personal APK/sideload distribution initially
+- Single module with feature packages
+- Hilt, Room, DataStore and Coroutines
+- Dark and light Material 3 themes
+- No advertisements or analytics in the MVP
+
+A Java/XML implementation is possible, but it would require more boilerplate and provide no meaningful advantage here. Python could be used later for optional desktop analysis of exported diagnostic data, but it should not be part of the mobile runtime.
