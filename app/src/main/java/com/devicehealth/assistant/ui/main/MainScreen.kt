@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
+import com.devicehealth.assistant.AppAnalysis
 import com.devicehealth.assistant.data.DeviceHealthState
 
 @Composable
@@ -31,6 +32,7 @@ fun MainScreen(
       DashboardContent(
           data = (state as DeviceHealthUiState.Success).data,
           onRefresh = { viewModel.refreshData() },
+          onItemClick = onItemClick,
           modifier = modifier
       )
     }
@@ -44,6 +46,7 @@ fun MainScreen(
 internal fun DashboardContent(
     data: DeviceHealthState, 
     onRefresh: () -> Unit,
+    onItemClick: (NavKey) -> Unit,
     modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -84,6 +87,10 @@ internal fun DashboardContent(
       }
 
       Spacer(modifier = Modifier.weight(1f))
+
+      Button(onClick = { onItemClick(AppAnalysis) }, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+          Text("App Analysis")
+      }
 
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Button(onClick = onRefresh, modifier = Modifier.weight(1f).padding(end = 8.dp)) {

@@ -12,9 +12,10 @@
 - Basic `Dev_plan` has been reviewed and updated to target API 34.
 - Scaffolded the base Android app (`com.devicehealth.assistant`).
 - Implemented **Phase 1: Core Dashboard** (RAM, Storage, Uptime).
+- Implemented **Phase 2: App Analysis** (Usage Access onboarding, App sizes, Recommendations).
 
 ## Next Steps
-- Implement Phase 2: App analysis (Usage Access onboarding, Installed app list, storage sizes).
+- Implement Phase 3: Lag tracking (Manual lag-report button, Quick Settings tile, Room event history).
 
 ## Key Constraints
 - Keep all diagnostic data on-device by default (offline MVP).

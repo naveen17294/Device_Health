@@ -17,10 +17,16 @@ fun MainNavigation() {
   NavDisplay(
     backStack = backStack,
     onBack = { backStack.removeLastOrNull() },
-    entryProvider =
+      entryProvider =
       entryProvider {
         entry<Main> {
           MainScreen(onItemClick = { navKey -> backStack.add(navKey) }, modifier = Modifier.safeDrawingPadding().padding(16.dp))
+        }
+        entry<AppAnalysis> {
+          com.devicehealth.assistant.ui.analysis.AppAnalysisScreen(
+              onBack = { backStack.removeLastOrNull() },
+              modifier = Modifier.safeDrawingPadding()
+          )
         }
       },
   )
