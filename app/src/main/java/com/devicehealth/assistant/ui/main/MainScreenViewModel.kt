@@ -1,27 +1,40 @@
 package com.devicehealth.assistant.ui.main
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.devicehealth.assistant.data.DataRepository
-import com.devicehealth.assistant.ui.main.MainScreenUiState.Success
-import kotlinx.coroutines.flow.SharingStarted
+import com.devicehealth.assistant.data.DeviceHealthRepository
+import com.devicehealth.assistant.data.DeviceHealthState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class MainScreenViewModel(dataRepository: DataRepository) : ViewModel() {
-  val uiState: StateFlow<MainScreenUiState> =
-    dataRepository.data
-      .map<List<String>, MainScreenUiState>(::Success)
-      .catch { emit(MainScreenUiState.Error(it)) }
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
+class MainScreenViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = DeviceHealthRepository(application)
+    
+    private val _uiState = MutableStateFlow<DeviceHealthUiState>(DeviceHealthUiState.Loading)
+    val uiState: StateFlow<DeviceHealthUiState> = _uiState.asStateFlow()
+
+    init {
+        refreshData()
+    }
+
+    fun refreshData() {
+        viewModelScope.launch {
+            _uiState.value = DeviceHealthUiState.Loading
+            try {
+                val state = repository.getHealthSnapshot()
+                _uiState.value = DeviceHealthUiState.Success(state)
+            } catch (e: Exception) {
+                _uiState.value = DeviceHealthUiState.Error(e)
+            }
+        }
+    }
 }
 
-sealed interface MainScreenUiState {
-  object Loading : MainScreenUiState
-
-  data class Error(val throwable: Throwable) : MainScreenUiState
-
-  data class Success(val data: List<String>) : MainScreenUiState
+sealed interface DeviceHealthUiState {
+    object Loading : DeviceHealthUiState
+    data class Error(val throwable: Throwable) : DeviceHealthUiState
+    data class Success(val data: DeviceHealthState) : DeviceHealthUiState
 }

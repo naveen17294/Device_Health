@@ -1,55 +1,108 @@
 package com.devicehealth.assistant.ui.main
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Text
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.devicehealth.assistant.data.DefaultDataRepository
-import com.devicehealth.assistant.theme.DeviceHealthTheme
+import com.devicehealth.assistant.data.DeviceHealthState
 
 @Composable
 fun MainScreen(
   onItemClick: (NavKey) -> Unit,
   modifier: Modifier = Modifier,
-  viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
+  viewModel: MainScreenViewModel = viewModel()
 ) {
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   when (state) {
-    MainScreenUiState.Loading -> {
-      // Blank
+    DeviceHealthUiState.Loading -> {
+      Box(modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+          CircularProgressIndicator()
+      }
     }
-    is MainScreenUiState.Success -> {
-      MainScreen(data = (state as MainScreenUiState.Success).data, modifier = modifier)
+    is DeviceHealthUiState.Success -> {
+      DashboardContent(
+          data = (state as DeviceHealthUiState.Success).data,
+          onRefresh = { viewModel.refreshData() },
+          modifier = modifier
+      )
     }
-    is MainScreenUiState.Error -> {
-      Text("Error loading data: ${(state as MainScreenUiState.Error).throwable.message}")
+    is DeviceHealthUiState.Error -> {
+      Text("Error loading data: ${(state as DeviceHealthUiState.Error).throwable.message}")
     }
   }
 }
 
 @Composable
-internal fun MainScreen(data: List<String>, modifier: Modifier = Modifier) {
-  Column(modifier) { data.forEach { Greeting(it) } }
+internal fun DashboardContent(
+    data: DeviceHealthState, 
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  val context = LocalContext.current
+  Column(modifier = modifier.padding(16.dp).fillMaxSize()) {
+      Text(text = "Device Health", style = MaterialTheme.typography.headlineMedium)
+      Spacer(modifier = Modifier.height(16.dp))
+
+      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+          Column(modifier = Modifier.padding(16.dp)) {
+              val ramUsed = data.ramTotalBytes - data.ramAvailableBytes
+              Text("RAM", style = MaterialTheme.typography.titleMedium)
+              Text("Used: ${formatBytes(ramUsed)} / ${formatBytes(data.ramTotalBytes)}")
+              if (data.ramLowMemory) {
+                  Text("⚠️ Android reports memory pressure", color = MaterialTheme.colorScheme.error)
+              }
+          }
+      }
+
+      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+          Column(modifier = Modifier.padding(16.dp)) {
+              val storageUsed = data.storageTotalBytes - data.storageAvailableBytes
+              val storagePercent = (storageUsed.toDouble() / data.storageTotalBytes * 100).toInt()
+              Text("Storage", style = MaterialTheme.typography.titleMedium)
+              Text("Used: ${formatBytes(storageUsed)} / ${formatBytes(data.storageTotalBytes)}")
+              Text("Free space: ${100 - storagePercent}%")
+              if (100 - storagePercent < 15) {
+                  Text("⚠️ Storage is critically low", color = MaterialTheme.colorScheme.error)
+              }
+          }
+      }
+
+      Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+          Column(modifier = Modifier.padding(16.dp)) {
+              val uptimeHours = data.uptimeMillis / (1000 * 60 * 60)
+              Text("Device Uptime", style = MaterialTheme.typography.titleMedium)
+              Text("$uptimeHours hours")
+          }
+      }
+
+      Spacer(modifier = Modifier.weight(1f))
+
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+          Button(onClick = onRefresh, modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+              Text("Refresh")
+          }
+          FilledTonalButton(onClick = {
+              try {
+                  context.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
+              } catch (e: Exception) {
+                  context.startActivity(Intent(Settings.ACTION_SETTINGS))
+              }
+          }, modifier = Modifier.weight(1f).padding(start = 8.dp)) {
+              Text("Storage Settings")
+          }
+      }
+  }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-  Text(text = "Hello $name!", modifier = modifier)
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-  DeviceHealthTheme { MainScreen(listOf("Android")) }
-}
-
-@Preview(showBackground = true, widthDp = 340)
-@Composable
-fun MainScreenPortraitPreview() {
-  DeviceHealthTheme { MainScreen(listOf("Android")) }
+private fun formatBytes(bytes: Long): String {
+    val gb = bytes / (1024.0 * 1024.0 * 1024.0)
+    return String.format("%.2f GB", gb)
 }
