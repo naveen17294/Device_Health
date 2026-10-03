@@ -11,7 +11,8 @@ data class Recommendation(
     val title: String,
     val message: String,
     val severity: Severity,
-    val explanation: String
+    val explanation: String,
+    val actionPackages: List<String> = emptyList()
 )
 
 class RecommendationEngine {
@@ -69,7 +70,8 @@ class RecommendationEngine {
                 title = "Large Apps Found",
                 message = "Review offline content for: $appNames",
                 severity = Severity.INFO,
-                explanation = "These apps exceed your configured size threshold. Consider clearing their cache or deleting downloaded media."
+                explanation = "These apps exceed your configured size threshold. Consider clearing their cache or deleting downloaded media.",
+                actionPackages = largeApps.take(3).map { it.packageName }
             ))
         }
 

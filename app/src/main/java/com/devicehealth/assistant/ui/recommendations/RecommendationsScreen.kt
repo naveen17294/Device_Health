@@ -59,6 +59,7 @@ fun RecommendationsScreen(
 @Composable
 fun RecommendationCard(rec: Recommendation) {
     var expanded by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Card(
         colors = CardDefaults.cardColors(
@@ -82,6 +83,24 @@ fun RecommendationCard(rec: Recommendation) {
 
             if (expanded) {
                 Text(rec.explanation, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                
+                if (rec.actionPackages.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        rec.actionPackages.forEach { pkg ->
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    intent.data = android.net.Uri.parse("package:$pkg")
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Clear Cache for $pkg")
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -40,6 +40,13 @@ fun MainNavigation() {
               modifier = Modifier.safeDrawingPadding()
           )
         }
+        entry<Settings> {
+          com.devicehealth.assistant.ui.settings.SettingsScreen(
+              onBack = { backStack.removeLastOrNull() },
+              userSettingsRepository = com.devicehealth.assistant.data.UserSettingsRepository(androidx.compose.ui.platform.LocalContext.current),
+              modifier = Modifier.safeDrawingPadding()
+          )
+        }
       },
   )
 }

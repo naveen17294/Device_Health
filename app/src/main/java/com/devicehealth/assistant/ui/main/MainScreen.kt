@@ -166,13 +166,7 @@ internal fun DashboardContent(
               Text("Refresh")
           }
           FilledTonalButton(
-              onClick = {
-                  try {
-                      context.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
-                  } catch (e: Exception) {
-                      context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                  }
-              }, 
+              onClick = { onItemClick(com.devicehealth.assistant.Settings) }, 
               modifier = Modifier.weight(1f).height(50.dp)
           ) {
               Icon(Icons.Rounded.Settings, contentDescription = null)
