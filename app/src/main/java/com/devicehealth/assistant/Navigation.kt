@@ -34,6 +34,12 @@ fun MainNavigation() {
               modifier = Modifier.safeDrawingPadding()
           )
         }
+        entry<Recommendations> {
+          com.devicehealth.assistant.ui.recommendations.RecommendationsScreen(
+              onBack = { backStack.removeLastOrNull() },
+              modifier = Modifier.safeDrawingPadding()
+          )
+        }
       },
   )
 }

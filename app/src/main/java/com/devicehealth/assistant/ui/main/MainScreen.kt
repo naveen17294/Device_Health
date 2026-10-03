@@ -100,6 +100,13 @@ internal fun DashboardContent(
           }
       }
 
+      Button(
+          onClick = { onItemClick(com.devicehealth.assistant.Recommendations) }, 
+          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+      ) {
+          Text("View Recommendations")
+      }
+
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           Button(onClick = onRefresh, modifier = Modifier.weight(1f).padding(end = 8.dp)) {
               Text("Refresh")

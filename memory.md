@@ -15,9 +15,10 @@
 - Implemented **Phase 2: App Analysis** (Usage Access onboarding, App sizes, Recommendations).
 - Added DataStore preferences for configurable app thresholds and storage warning percentages.
 - Implemented **Phase 3: Lag Tracking** (Room DB, Quick Settings Tile, Manual log history screen).
+- Implemented **Phase 4: Recommendations** (Deterministic rule engine for device optimization).
 
 ## Next Steps
-- Implement Phase 4: Recommendations (Deterministic rule engine for device optimization).
+- Implement Phase 5: Quality (Unit tests, Macrobenchmark, build configuration).
 
 ## Key Constraints
 - Keep all diagnostic data on-device by default (offline MVP).
